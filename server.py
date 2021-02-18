@@ -11,6 +11,7 @@ class Server:
 
         self._threads = {}      # stores the threads (Thread) & their keys ({sockname}_client_thread)
         self._connections = {}  # stores the connections (conn) & their keys (sockname)
+        self._usernames = {}    # stores the usernames & their keys (sockname)
 
         self.start()
 
@@ -37,9 +38,16 @@ class Server:
         while True:
             try:
                 data = conn.recv(1024).decode()
-                self.broadcast_message(f"{addr[1]}: {data}")    # sends data back to all clients
                 if data:
-                    print(f"{addr[1]}: {data}")
+                    if data[:3] == "USN":
+                        data = data[3:]
+                        self._usernames[addr[1]] = data
+                        print(self._usernames)
+                    elif data[:3] == "MSG":
+                        data = data[3:]
+                        self.broadcast_message(f"{self._usernames[addr[1]]}: {data}")    # sends data back to all clients
+                        print(f"{self._usernames[addr[1]]}: {data}")
+
             except ConnectionResetError:
                 del self._connections[addr[1]]
                 del self._threads[f"{addr[1]}_client_thread"]   # client has disconnected, we don't need to deal with them anymore;
