@@ -13,12 +13,15 @@ class Client(QtWidgets.QMainWindow):
         uic.loadUi("ui/chatroom.ui", self)
 
         self._username = username
+        self._users_connected = []
+        self._username_check_done = False
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.connect((ip, port))
 
         self.send_button.clicked.connect(self.handle_input)
 
         self.set_username(username)
+
         self.show()
         self.start()
 
@@ -34,16 +37,22 @@ class Client(QtWidgets.QMainWindow):
             data = self._server_socket.recv(1024).decode()
             if data:
                 if data.startswith("USL"):
-                    data = data[3:]
                     print(data)
+                    data = data[3:]
                     data = json.loads(data)
+
+                    self._users_connected = data
+                    if self._username_check_done is False:
+                        self.check_username()
+                        self._username_check_done = True
+
                     self.user_list.clear()
                     for username in data:
                         list_item = QtWidgets.QListWidgetItem(username)
                         self.user_list.addItem(list_item)
                 else:
                     if data.startswith(f"{self._username}:"):
-                        data = data.replace(f"{self._username}:", "You:")
+                        data = data.replace(f"{self._username}:", "You:", 1)
                     list_item = QtWidgets.QListWidgetItem(data)
                     self.message_list.addItem(list_item)
 
@@ -59,9 +68,24 @@ class Client(QtWidgets.QMainWindow):
         self._server_socket.send(msg.encode("utf-8"))
 
     def set_username(self, username=None):
-        self._username = username.replace('"', '').lower()
+        username = username.replace(':', '').lower()
+
+        discrim = str(random.randint(1000,9999))
+        self._username = username + "#" + discrim
+
         _set_username = "USN" + self._username
         self._server_socket.send(_set_username.encode("utf-8"))
+
+    def check_username(self):
+        while True:
+            print(self._username)
+            if self._users_connected.count(self._username) > 1:
+                discrim = str(random.randint(1000,9999))
+                self._username = self._username[:-4] + discrim
+                self.set_username(username=self._username)
+                print(self._username)
+            else:
+                return
 
     def closeEvent(self, event):
         os._exit()

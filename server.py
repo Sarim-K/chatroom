@@ -23,7 +23,6 @@ class Server:
             self._threads["user_list_thread"] = threading.Thread(target=self.broadcast_user_list)
             self._threads["connection_handling_thread"].start()
             self._threads["user_list_thread"].start()
-
         except Exception as e:
             print(e)
 
@@ -40,10 +39,14 @@ class Server:
         self.handle_connections()
 
     def broadcast_user_list(self):
-        data = "USL" + str(json.dumps(list(self._usernames.values())))
-        for conn in self._connections.values():
-            conn.send(data.encode("utf-8"))
-        time.sleep(1)
+        try:
+            data = "USL" + str(json.dumps(list(self._usernames.values())))
+            print("broadcasting", data)
+            for conn in self._connections.values():
+                conn.send(data.encode("utf-8"))
+            time.sleep(0.25)
+        except Exception as e:
+            pass
         self.broadcast_user_list()
 
     def listen_to_connection(self, conn, addr):
