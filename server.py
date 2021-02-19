@@ -1,6 +1,8 @@
 import socket
 import threading
 import config
+import time
+import json
 
 class Server:
     def __init__(self, ip, port=57801, listeners=5):
@@ -18,7 +20,10 @@ class Server:
     def start(self):
         try:
             self._threads["connection_handling_thread"] = threading.Thread(target=self.handle_connections)
+            self._threads["user_list_thread"] = threading.Thread(target=self.broadcast_user_list)
             self._threads["connection_handling_thread"].start()
+            self._threads["user_list_thread"].start()
+
         except Exception as e:
             print(e)
 
@@ -34,21 +39,29 @@ class Server:
 
         self.handle_connections()
 
+    def broadcast_user_list(self):
+        data = "USL" + str(json.dumps(list(self._usernames.values())))
+        for conn in self._connections.values():
+            conn.send(data.encode("utf-8"))
+        time.sleep(5)
+        self.broadcast_user_list()
+
     def listen_to_connection(self, conn, addr):
         while True:
             try:
                 data = conn.recv(1024).decode()
                 if data:
-                    if data[:3] == "USN":
+                    if data[:3] == "USN":   # username list
                         data = data[3:]
                         self._usernames[addr[1]] = data
                         print(self._usernames)
-                    elif data[:3] == "MSG":
+                    elif data[:3] == "MSG": # message
                         data = data[3:]
                         self.broadcast_message(f"{self._usernames[addr[1]]}: {data}")    # sends data back to all clients
                         print(f"{self._usernames[addr[1]]}: {data}")
 
             except ConnectionResetError:
+                del self._usernames[addr[1]]
                 del self._connections[addr[1]]
                 del self._threads[f"{addr[1]}_client_thread"]   # client has disconnected, we don't need to deal with them anymore;
                 print(list(self._threads.keys()))               # throw conn & thread out of dictionaries and break the loop so the
