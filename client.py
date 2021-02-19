@@ -8,17 +8,17 @@ import os
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 
 class Client(QtWidgets.QMainWindow):
-    def __init__(self, ip, port=57801):
+    def __init__(self, ip, username, port=57801):
         super().__init__()
         uic.loadUi("ui/chatroom.ui", self)
 
+        self._username = username
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.connect((ip, port))
 
         self.send_button.clicked.connect(self.handle_input)
 
-        print(f"user id: {self._server_socket.getsockname()[1]}")
-        self.set_username(str(random.randint(1,10000)))
+        self.set_username(username)
         self.show()
         self.start()
 
@@ -42,6 +42,8 @@ class Client(QtWidgets.QMainWindow):
                         list_item = QtWidgets.QListWidgetItem(username)
                         self.user_list.addItem(list_item)
                 else:
+                    if data.startswith(f"{self._username}:"):
+                        data = data.replace(f"{self._username}:", "You:")
                     list_item = QtWidgets.QListWidgetItem(data)
                     self.message_list.addItem(list_item)
 
@@ -57,9 +59,6 @@ class Client(QtWidgets.QMainWindow):
         self._server_socket.send(msg.encode("utf-8"))
 
     def set_username(self, username=None):
-        if not username:
-            username = str(input("pick a username: "))
-
         self._username = username.replace('"', '').lower()
         _set_username = "USN" + self._username
         self._server_socket.send(_set_username.encode("utf-8"))
@@ -67,8 +66,19 @@ class Client(QtWidgets.QMainWindow):
     def closeEvent(self, event):
         os._exit()
 
+class InputUsername(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__()
+        uic.loadUi("ui/username.ui", self)
+        self.ok_button.clicked.connect(self.save_username)
+        self.show()
+
+    def save_username(self):
+        self.window = Client(config.cfg(), self.username_box.text())
+        self.window.show()
+        self.close()
+
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
-    ip = config.cfg()
-    window = Client(ip)
+    window = InputUsername()
     app.exec_()

@@ -43,7 +43,7 @@ class Server:
         data = "USL" + str(json.dumps(list(self._usernames.values())))
         for conn in self._connections.values():
             conn.send(data.encode("utf-8"))
-        time.sleep(5)
+        time.sleep(1)
         self.broadcast_user_list()
 
     def listen_to_connection(self, conn, addr):
@@ -60,12 +60,12 @@ class Server:
                         self.broadcast_message(f"{self._usernames[addr[1]]}: {data}")    # sends data back to all clients
                         print(f"{self._usernames[addr[1]]}: {data}")
 
-            except ConnectionResetError:
+            except ConnectionResetError:                        # client has disconnected, we don't need to deal with them anymore;
+                del self._connections[addr[1]]                  # throw conn & thread out of dictionaries and break the loop so the
+                del self._threads[f"{addr[1]}_client_thread"]   # server will stop processing it.
+                self.broadcast_message(f"Server: {self._usernames[addr[1]]} has disconnected.")
                 del self._usernames[addr[1]]
-                del self._connections[addr[1]]
-                del self._threads[f"{addr[1]}_client_thread"]   # client has disconnected, we don't need to deal with them anymore;
-                print(list(self._threads.keys()))               # throw conn & thread out of dictionaries and break the loop so the
-                break                                           # server will stop processing it.
+                break
 
     def broadcast_message(self, data):
         data = data.encode("utf-8")
