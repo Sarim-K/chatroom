@@ -74,6 +74,11 @@
     </item>
     <item row="2" column="2">
      <widget class="QPushButton" name="send_button">
+      <property name="font">
+       <font>
+        <underline>false</underline>
+       </font>
+      </property>
       <property name="text">
        <string>Send</string>
       </property>

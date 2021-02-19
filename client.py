@@ -35,9 +35,9 @@ class Client(QtWidgets.QMainWindow):
     def handle_broadcasts(self):
         while True:
             data = self._server_socket.recv(1024).decode()
+            print(data)
             if data:
                 if data.startswith("USL"):
-                    print(data)
                     data = data[3:]
                     data = json.loads(data)
 
@@ -65,6 +65,7 @@ class Client(QtWidgets.QMainWindow):
             self.set_username(username=username)
         else:
             msg = "MSG" + msg
+
         self._server_socket.send(msg.encode("utf-8"))
 
     def set_username(self, username=None):
@@ -78,12 +79,10 @@ class Client(QtWidgets.QMainWindow):
 
     def check_username(self):
         while True:
-            print(self._username)
             if self._users_connected.count(self._username) > 1:
                 discrim = str(random.randint(1000,9999))
                 self._username = self._username[:-4] + discrim
                 self.set_username(username=self._username)
-                print(self._username)
             else:
                 return
 
