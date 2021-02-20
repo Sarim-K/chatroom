@@ -94,7 +94,9 @@ class Home(QtWidgets.QMainWindow):
                 if username:
                     self.username_box.setText(username)
         except FileNotFoundError:
-            open("resources/cache.txt", "w").close()
+            if not os.path.exists("resources"):    # creates directory
+                os.makedirs("resources")
+            open("resources/cache.txt", "w+").close()    # creates file
 
         self.show()
 
