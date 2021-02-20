@@ -6,27 +6,28 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>220</width>
-    <height>129</height>
+    <width>262</width>
+    <height>134</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>Chatroom</string>
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
     <item>
-     <widget class="QLabel" name="label">
-      <property name="text">
-       <string>Input Username:</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignCenter</set>
+     <widget class="QLineEdit" name="ip_box">
+      <property name="placeholderText">
+       <string>IP Address:</string>
       </property>
      </widget>
     </item>
     <item>
-     <widget class="QLineEdit" name="username_box"/>
+     <widget class="QLineEdit" name="username_box">
+      <property name="placeholderText">
+       <string>Username:</string>
+      </property>
+     </widget>
     </item>
     <item>
      <widget class="QPushButton" name="ok_button">
@@ -48,7 +49,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>220</width>
+     <width>262</width>
      <height>21</height>
     </rect>
    </property>
