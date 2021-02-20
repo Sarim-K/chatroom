@@ -1,3 +1,4 @@
 config.txt
 message_codes.txt
+cache.txt
 *.pyc
