@@ -48,25 +48,38 @@ class Server:
                 if data:
                     if data[:3] == "USN":   # username change
                         data = data[3:]
-                        self._connections[addr[1]][1] = data    # set username
+                        username = self.check_username(data)
+                        self._connections[addr[1]][1] = username    # set username
+                        self.send_data_to_client(conn, f"USN{username}")    # send validated username back to the client
                         self.broadcast_user_list()
                     elif data[:3] == "MSG": # message
                         data = data[3:]
-                        self.broadcast_message(f"{self._connections[addr[1]][1]}: {data}")    # sends data back to all clients
+                        self.broadcast_message(f"MSG{self._connections[addr[1]][1]}: {data}")    # sends data back to all clients
 
             except ConnectionResetError:
                 username_cache = self._connections[addr[1]][1]
                 del self._connections[addr[1]]                  # client has disconnected, we don't need to deal with them anymore;
                 del self._threads[f"{addr[1]}_client_thread"]   # throw conn & thread out of dictionaries and break the loop so the
-                self.broadcast_message(f"Server: {username_cache} has disconnected.")             # server will stop processing it.
+                self.broadcast_message(f"MSGServer: {username_cache} has disconnected.")             # server will stop processing it.
                 self.broadcast_user_list()
                 break
+
+    def send_data_to_client(self, conn, data):
+        conn.send(data.encode("utf-8"))
 
     def broadcast_message(self, data):
         data = data.encode("utf-8")
         print("broadcasting", data)
         for conn in self._connections.values():
             conn[0].send(data)
+
+    def check_username(self, username):
+        username = username.replace(':', '').lower()
+        while True:
+            if self.usernames.count(username) > 1:
+                username = username[:-4] + str(random.randint(1000,9999))
+            else:
+                return username
 
     @property
     def usernames(self):

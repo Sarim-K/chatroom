@@ -12,14 +12,14 @@ class Chatroom(QtWidgets.QMainWindow):
         uic.loadUi("ui/chatroom.ui", self)
 
         self._username = username + "#" + str(random.randint(1000,9999))
-        self._users_connected = []
-        self._username_check_count = 0
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.connect((ip, port))
 
         self.message_box.returnPressed.connect(self.handle_input)
         self.send_button.clicked.connect(self.handle_input)
-        self.check_and_send_username()
+
+        username_to_send = "USN" + self._username
+        self._server_socket.send(username_to_send.encode("utf-8"))
 
         self.show()
         self.start()
@@ -35,19 +35,19 @@ class Chatroom(QtWidgets.QMainWindow):
         while True:
             data = self._server_socket.recv(4096).decode()
             if data:
-                if data.startswith("USL"):
+                print("data in:", data)
+                if data.startswith("USL"):  # username list
                     data = data[3:]
                     data = json.loads(data)
 
-                    self._users_connected = data    # used to see if username is valid in self.check_and_send_username()
-                    if self._username_check_count != 2:     # 2 bc on the 1st run the username list is not in memory yet, so the check [1/5]
-                        self.check_and_send_username()      # only works after 1st run. we only want it to run once (not for every new user) [2/5]
-                                                            # otherwise both conflicting users will have their names changed, not just the new user [3/5]
-                    self.user_list.clear()                  # as the new user will be running it on its second run whereas the already existing user [4/5]
-                    for username in data:                   # would be on their 3rd (or more) run of the method [5/5]
+                    self.user_list.clear()
+                    for username in data:
                         list_item = QtWidgets.QListWidgetItem(username)
                         self.user_list.addItem(list_item)
-                else:
+                elif data.startswith("USN"):    # username change
+                    self._username = data[3:]
+                elif data.startswith("MSG"):
+                    data = data[3:]
                     if data.startswith(f"{self._username}:"):
                         data = data.replace(f"{self._username}:", "You:", 1)
                     list_item = QtWidgets.QListWidgetItem(data)
@@ -59,23 +59,10 @@ class Chatroom(QtWidgets.QMainWindow):
 
         if msg.startswith("/username"):
             self._username = " ".join(msg.split(" ")[1:])   # joins everything after the first space together
-            self.check_and_send_username()
+            self._server_socket.send(self._username.encode("utf-8"))
         else:
             msg = "MSG" + msg
             self._server_socket.send(msg.encode("utf-8"))
-
-    # method loops until username is valid then increments flag & sends username to server
-    def check_and_send_username(self):
-        self._username = self._username.replace(':', '').lower()
-        while True:
-            if self._users_connected.count(self._username) > 1:
-                discrim = str(random.randint(1000,9999))
-                self._username = self._username[:-4] + discrim
-            else:
-                _send_username = "USN" + self._username
-                self._server_socket.send(_send_username.encode("utf-8"))
-                self._username_check_count += 1
-                return
 
     def closeEvent(self, event):
         os._exit(1)
