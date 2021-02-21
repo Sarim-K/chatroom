@@ -6,7 +6,6 @@ import random
 import os
 from resources import breeze_resources
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
-from PyQt5.QtCore import QFile, QTextStream, QDir
 
 class Chatroom(QtWidgets.QMainWindow):
     def __init__(self, ip, username, port=57801):
@@ -109,9 +108,9 @@ class Home(QtWidgets.QMainWindow):
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
 
-    file = QFile(":/dark.qss")
-    file.open(QFile.ReadOnly | QFile.Text)
-    stream = QTextStream(file)
+    file = QtCore.QFile(":/dark.qss")
+    file.open(QtCore.QFile.ReadOnly | QtCore.QFile.Text)
+    stream = QtCore.QTextStream(file)
     app.setStyleSheet(stream.readAll())
 
     window = Home()
