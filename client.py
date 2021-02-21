@@ -4,21 +4,23 @@ import sys
 import json
 import random
 import os
+from resources import breeze_resources
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
+from PyQt5.QtCore import QFile, QTextStream, QDir
 
 class Chatroom(QtWidgets.QMainWindow):
     def __init__(self, ip, username, port=57801):
         super().__init__()
         uic.loadUi("ui/chatroom.ui", self)
 
-        self._username = username + "#" + str(random.randint(1000,9999))
+        self._username = username
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.connect((ip, port))
 
         self.message_box.returnPressed.connect(self.handle_input)
         self.send_button.clicked.connect(self.handle_input)
 
-        username_to_send = "USN" + self._username
+        username_to_send = self.add_tags("USN", self._username)
         self._server_socket.send(username_to_send.encode("utf-8"))
 
         self.show()
@@ -35,23 +37,22 @@ class Chatroom(QtWidgets.QMainWindow):
         while True:
             data = self._server_socket.recv(4096).decode()
             if data:
-                print("data in:", data)
-                if data.startswith("USL"):  # username list
-                    data = data[3:]
-                    data = json.loads(data)
-
+                if data[:5] == "<USL>" and data[-6:] == "</USL>":  # username list
+                    data = json.loads(data[5:-6]) #string to list
                     self.user_list.clear()
                     for username in data:
-                        list_item = QtWidgets.QListWidgetItem(username)
-                        self.user_list.addItem(list_item)
-                elif data.startswith("USN"):    # username change
-                    self._username = data[3:]
-                elif data.startswith("MSG"):
-                    data = data[3:]
+                        if username == self._username:
+                            username += " (You)"
+                        self.add_to_list(self.user_list, username)
+
+                elif data[:5] == "<USN>" and data[-6:] == "</USN>":    # username change
+                    self._username = data[5:-6]
+
+                elif data[:5] == "<MSG>" and data[-6:] == "</MSG>":
+                    data = data[5:-6]
                     if data.startswith(f"{self._username}:"):
                         data = data.replace(f"{self._username}:", "You:", 1)
-                    list_item = QtWidgets.QListWidgetItem(data)
-                    self.message_list.addItem(list_item)
+                    self.add_to_list(self.message_list, data)
 
     def handle_input(self):
         msg = self.message_box.text()
@@ -59,10 +60,18 @@ class Chatroom(QtWidgets.QMainWindow):
 
         if msg.startswith("/username"):
             self._username = " ".join(msg.split(" ")[1:])   # joins everything after the first space together
-            self._server_socket.send(self._username.encode("utf-8"))
+            username_to_send = self.add_tags("USN", self._username)
+            self._server_socket.send(username_to_send.encode("utf-8"))
         else:
-            msg = "MSG" + msg
+            msg = self.add_tags("MSG", msg)
             self._server_socket.send(msg.encode("utf-8"))
+
+    def add_to_list(self, list_object, data):
+        list_item = QtWidgets.QListWidgetItem(data)
+        list_object.addItem(list_item)
+
+    def add_tags(self, tag, data):
+        return f"<{tag}>{data}</{tag}>"
 
     def closeEvent(self, event):
         os._exit(1)
@@ -77,9 +86,9 @@ class Home(QtWidgets.QMainWindow):
             with open("resources/cache.txt", "r") as f:
                 ip, username = f.readline(), f.readline()
                 if ip:
-                    self.ip_box.setText(ip)
+                    self.ip_box.setText(ip.strip())
                 if username:
-                    self.username_box.setText(username)
+                    self.username_box.setText(username.strip())
         except FileNotFoundError:
             if not os.path.exists("resources"):    # creates directory
                 os.makedirs("resources")
@@ -99,5 +108,11 @@ class Home(QtWidgets.QMainWindow):
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
+
+    file = QFile(":/dark.qss")
+    file.open(QFile.ReadOnly | QFile.Text)
+    stream = QTextStream(file)
+    app.setStyleSheet(stream.readAll())
+
     window = Home()
     app.exec_()
